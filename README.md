@@ -1,5 +1,7 @@
 # mathematical_robotics
 
+[![build](https://github.com/TakumaNakao/mathematical_robotics/actions/workflows/build.yml/badge.svg)](https://github.com/TakumaNakao/mathematical_robotics/actions/workflows/build.yml)
+
 ## 環境
 * CMake
 * Eigen3
