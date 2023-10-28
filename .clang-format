@@ -1,0 +1,21 @@
+BasedOnStyle: LLVM
+
+Language: Cpp
+IndentWidth: 4
+ColumnLimit: 100000
+IncludeBlocks: Preserve
+SortIncludes: Never
+AccessModifierOffset: -4
+BreakBeforeBraces: Linux
+DerivePointerAlignment: false
+PointerAlignment: Left
+SpaceAfterTemplateKeyword: false
+AlwaysBreakTemplateDeclarations: true
+BreakConstructorInitializers: AfterColon
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterNamespace: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeWhile: false
