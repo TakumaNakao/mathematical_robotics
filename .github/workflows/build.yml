@@ -1,0 +1,15 @@
+name: build
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: takumanakao/mathematical_robotics:latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Configure cmake
+      run: cmake -S example -B example/build
+    - name: Build
+      run: cmake --build example/build

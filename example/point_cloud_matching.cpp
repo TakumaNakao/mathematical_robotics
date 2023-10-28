@@ -12,24 +12,34 @@
 #include "lie_group.hpp"
 #include "matplotlibcpp.hpp"
 
-using ceres::AutoDiffCostFunction;
-using ceres::CostFunction;
-using ceres::Problem;
-using ceres::Solve;
-using ceres::Solver;
+// class TransformationError : public ceres::SizedCostFunction<3, 6> {
+// public:
+//     ReprojectionErrorSE3XYZ(Eigen::Vector3d ref) : ref_(ref) {}
 
-struct CostFunctor {
-    template<typename T>
-    bool operator()(const T* x, T* residual) const
+//     virtual bool Evaluate(double const* const* parameters, double* residuals, double** jacobians) const;
+
+// private:
+//     Eigen::Vector3d ref_;
+// };
+
+class TransformationError {
+public:
+    TransformationError(Eigen::Vector3d query, Eigen::Vector3d truth) : query_(query), truth_(truth) {}
+    bool operator()(const double* const x, double* residual) const
     {
-        residual[0] = x[0] + 1.0;
-        residual[1] = x[1] + 2.0;
-        residual[2] = x[2] + 3.0;
-        residual[3] = x[3] + 4.0;
-        residual[4] = x[4] + 5.0;
-        residual[5] = x[5] + 6.0;
+        Eigen::Vector6d eigen_x = Eigen::Map<const Eigen::Vector6d>(x);
+        const auto transformation = math_utils::lie::exp(eigen_x);
+        auto result = math_utils::lie::transformation(transformation, query_);
+        auto e = truth_ - result;
+        residual[0] = e(0);
+        residual[1] = e(1);
+        residual[2] = e(2);
         return true;
     }
+
+private:
+    Eigen::Vector3d query_;
+    Eigen::Vector3d truth_;
 };
 
 int main()
@@ -45,12 +55,12 @@ int main()
     const Eigen::Vector6d x_truth(5.0, -5.0, 0.5, 0.3, -0.2, -0.3);
     const auto x_truth_transformation = math_utils::lie::exp(x_truth);
 
-    std::array<Eigen::Vector3d, point_cloud_num> point_cloud_a;
-    std::array<Eigen::Vector3d, point_cloud_num> point_cloud_b;
+    std::array<Eigen::Vector3d, point_cloud_num> point_cloud_truth;
+    std::array<Eigen::Vector3d, point_cloud_num> point_cloud_query;
 
     for (size_t i = 0; i < point_cloud_num; i++) {
-        point_cloud_a[i] = Eigen::Vector3d(pos_rand(engine), pos_rand(engine), pos_rand(engine));
-        point_cloud_b[i] = math_utils::lie::transformation(x_truth_transformation, point_cloud_a[i] + Eigen::Vector3d(error_rand(engine), error_rand(engine), error_rand(engine)));
+        point_cloud_truth[i] = Eigen::Vector3d(pos_rand(engine), pos_rand(engine), pos_rand(engine));
+        point_cloud_query[i] = math_utils::lie::transformation(x_truth_transformation, point_cloud_truth[i] + Eigen::Vector3d(error_rand(engine), error_rand(engine), error_rand(engine)));
     }
 
     auto plot_point_cloud = [](const std::array<Eigen::Vector3d, point_cloud_num>& point_cloud) {
@@ -63,24 +73,35 @@ int main()
         plt::plot(x, y, ".");
     };
 
-    plot_point_cloud(point_cloud_a);
-    plot_point_cloud(point_cloud_b);
-    plt::save("a.png");
+    plot_point_cloud(point_cloud_truth);
+    plot_point_cloud(point_cloud_query);
+    plt::save("point_cloud_matching_before.png");
+    plt::clf();
 
-    Eigen::Vector6d initial_x(5.0, -5.0, 1.0, 1.0, 2.0, 3.0);
+    Eigen::Vector6d initial_x = Eigen::Vector6d::Zero();
     Eigen::Vector6d x = initial_x;
 
-    Problem problem;
+    ceres::Problem problem;
+    for (size_t i = 0; i < point_cloud_num; i++) {
+        ceres::CostFunction* cost_function = new ceres::NumericDiffCostFunction<TransformationError, ceres::CENTRAL, 3, 6>(new TransformationError(point_cloud_query[i], point_cloud_truth[i]));
+        problem.AddResidualBlock(cost_function, NULL, x.data());
+    }
 
-    CostFunction* cost_function = new AutoDiffCostFunction<CostFunctor, 6, 6>(new CostFunctor);
-
-    problem.AddResidualBlock(cost_function, NULL, x.data());
-
-    Solver::Options options;
+    ceres::Solver::Options options;
     options.minimizer_progress_to_stdout = true;
-    Solver::Summary summary;
-    Solve(options, &problem, &summary);
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, &problem, &summary);
 
     std::cout << summary.FullReport() << std::endl;
     std::cout << "x:" << initial_x.transpose() << "->" << x.transpose() << std::endl;
+
+    const auto x_transformation = math_utils::lie::exp(x);
+    std::array<Eigen::Vector3d, point_cloud_num> point_cloud_result;
+    for (size_t i = 0; i < point_cloud_num; i++) {
+        point_cloud_result[i] = math_utils::lie::transformation(x_transformation, point_cloud_query[i]);
+    }
+    plot_point_cloud(point_cloud_truth);
+    plot_point_cloud(point_cloud_result);
+    plt::save("point_cloud_matching_after.png");
+    plt::clf();
 }
