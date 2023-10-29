@@ -8,6 +8,12 @@
 * Ceres Solver
 * matplotlib
 
+## Docker
+以下のコマンドでDockerを起動できる
+```
+bash docker_bringup.sh
+```
+
 ## point_cloud_matching
 リー群による剛体変換を用いた3次元点群のマッチング  
 最適化にはCeres Solverを使用
