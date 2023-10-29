@@ -8,10 +8,10 @@
 
 #include <Eigen/Dense>
 #include <ceres/ceres.h>
+#include <matplot/matplot.h>
 
 #include "math_utils.hpp"
 #include "lie_group.hpp"
-#include "matplotlibcpp.hpp"
 
 template<size_t D>
 class KdTree {
@@ -174,15 +174,15 @@ private:
 
 int main()
 {
-    namespace plt = matplotlibcpp;
+    namespace plt = matplot;
 
     std::mt19937 engine(0);
     std::uniform_real_distribution<> pos_rand(-10, 10);
     std::uniform_real_distribution<> error_rand(-0.1, 0.1);
 
-    constexpr size_t point_cloud_num = 1000;
+    constexpr size_t point_cloud_num = 300;
 
-    const Eigen::Vector6d x_truth(10.0, -10.0, 0.5, 0.3, -0.2, -0.3);
+    const Eigen::Vector6d x_truth(15.0, -15.0, 10.0, 0.3, -0.2, -0.3);
     const auto x_truth_transformation = math_utils::lie::exp(x_truth);
 
     std::vector<Eigen::Vector3d> point_cloud_truth(point_cloud_num);
@@ -193,20 +193,23 @@ int main()
         point_cloud_query[i] = math_utils::lie::transformation(x_truth_transformation, point_cloud_truth[i] + Eigen::Vector3d(error_rand(engine), error_rand(engine), error_rand(engine)));
     }
 
-    auto plot_point_cloud = [](const std::vector<Eigen::Vector3d>& point_cloud) {
+    auto plot_point_cloud = [](const std::vector<Eigen::Vector3d>& point_cloud, const std::string& color = "blue") {
         std::vector<double> x, y, z;
         for (size_t i = 0; i < point_cloud.size(); i++) {
             x.push_back(point_cloud[i](0));
             y.push_back(point_cloud[i](1));
             z.push_back(point_cloud[i](2));
         }
-        plt::plot(x, y, ".");
+        plt::plot3(x, y, z, ".")->marker_size(4).color(color);
     };
 
-    plot_point_cloud(point_cloud_truth);
-    plot_point_cloud(point_cloud_query);
-    plt::save("point_cloud_matching_before.png");
-    plt::clf();
+    plt::hold(plt::on);
+    plot_point_cloud(point_cloud_truth, "blue");
+    plot_point_cloud(point_cloud_query, "red");
+    plt::hold(plt::off);
+    plt::save("img/point_cloud_matching_before.png");
+    plt::show();
+    plt::cla();
 
     auto point_cloud_truth_tree = std::make_shared<KdTree<3>>(KdTree<3>::build(point_cloud_truth));
 
@@ -239,8 +242,11 @@ int main()
     for (size_t i = 0; i < point_cloud_num; i++) {
         point_cloud_result[i] = math_utils::lie::transformation(x_transformation, point_cloud_query[i]);
     }
-    plot_point_cloud(point_cloud_truth);
-    plot_point_cloud(point_cloud_result);
-    plt::save("point_cloud_matching_after.png");
-    plt::clf();
+    plt::hold(plt::on);
+    plot_point_cloud(point_cloud_truth, "blue");
+    plot_point_cloud(point_cloud_result, "red");
+    plt::hold(plt::off);
+    plt::save("img/point_cloud_matching_after.png");
+    plt::show();
+    plt::cla();
 }

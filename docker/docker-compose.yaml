@@ -6,6 +6,7 @@ services:
       - DISPLAY=${DISPLAY}
     volumes:
       - ../../mathematical_robotics:/home/mathematical_robotics
+      - /tmp/.X11-unix:/tmp/.X11-unix
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
     working_dir: /home/mathematical_robotics

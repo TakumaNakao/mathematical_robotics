@@ -6,7 +6,7 @@
 * CMake
 * Eigen3
 * Ceres Solver
-* matplotlib
+* Matplot++
 
 ## Docker
 以下のコマンドでDockerを起動できる
@@ -16,4 +16,8 @@ bash docker_bringup.sh
 
 ## point_cloud_matching
 リー群による剛体変換を用いた3次元点群のマッチング  
-最適化にはCeres Solverを使用
+最適化にはCeres Solverを使用  
+
+### 例
+<img src="img/point_cloud_matching_before.png" width="49.5%">
+<img src="img/point_cloud_matching_after.png" width="49.5%">

@@ -7,19 +7,24 @@ RUN apt update && apt upgrade -y &&\
     git \
     wget \
     unzip \
-    libpython3-dev \
     python3-pip \ 
     cmake \
-    python3-dev \
-    python3-numpy \
-    python3-matplotlib \
     libeigen3-dev \
     libgoogle-glog-dev \
     libgflags-dev \
     libatlas-base-dev \
     libsuitesparse-dev \
     x11-xserver-utils \
+    gnuplot \
     && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/alandefreitas/matplotplusplus \
+    && cd matplotplusplus \
+    && mkdir build \
+    && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O2" -DMATPLOTPP_BUILD_EXAMPLES=OFF -DMATPLOTPP_BUILD_TESTS=OFF \
+    && cmake --build . --parallel 2 --config Release \
+    && cmake --install .
 
 RUN git clone https://ceres-solver.googlesource.com/ceres-solver \
     &&  cd ceres-solver \
