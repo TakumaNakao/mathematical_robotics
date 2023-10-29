@@ -9,7 +9,8 @@
 namespace Eigen
 {
 typedef Matrix<double, 6, 1> Vector6d;
-}
+typedef Matrix<double, 6, 6> Matrix6d;
+} // namespace Eigen
 
 namespace math_constants
 {

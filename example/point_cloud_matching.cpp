@@ -13,29 +13,87 @@
 #include "lie_group.hpp"
 #include "matplotlibcpp.hpp"
 
-// class TransformationError : public ceres::SizedCostFunction<3, 6> {
-// public:
-//     ReprojectionErrorSE3XYZ(Eigen::Vector3d ref) : ref_(ref) {}
+Eigen::Vector6d solve(const Eigen::Vector6d& init_x, const std::vector<Eigen::Vector3d>& query, const std::vector<Eigen::Vector3d>& truth)
+{
+    auto solve_once = [&query, &truth](const Eigen::Vector6d& x) -> std::tuple<Eigen::Vector6d, double> {
+        Eigen::Matrix6d h = Eigen::Matrix6d::Zero();
+        Eigen::Vector6d g = Eigen::Vector6d::Zero();
+        double cost = 0;
+        const auto transformation = math_utils::lie::exp(x);
+        for (size_t j = 0; j < query.size(); j++) {
+            auto result = math_utils::lie::transformation(transformation, query[j]);
+            auto e = result - truth[j];
+            Eigen::Matrix3d r = transformation.block(0, 0, 3, 3);
+            Eigen::Matrix<double, 3, 6> jac;
+            jac.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
+            jac.block(0, 3, 3, 3) = math_utils::lie::skew(-result);
+            h += jac.transpose() * jac;
+            g += jac.transpose() * e;
+            cost += 0.5 * e.dot(e);
+        }
+        Eigen::Vector6d dx = h.fullPivLu().solve(-g);
+        return {dx, cost};
+    };
+    double last_cost = std::numeric_limits<double>::max();
+    Eigen::Vector6d x = init_x;
+    while (true) {
+        auto [dx, cost] = solve_once(x);
+        x = math_utils::lie::log(Eigen::Matrix4d(math_utils::lie::exp(x) * math_utils::lie::exp(dx)));
+        std::cout << "cost: " << cost << std::endl;
+        if (last_cost < cost) {
+            break;
+        }
+        if (last_cost - cost < 1e-6) {
+            break;
+        }
+        last_cost = cost;
+    }
+    return x;
+}
 
-//     virtual bool Evaluate(double const* const* parameters, double* residuals, double** jacobians) const;
+class TransformationCostFunction : public ceres::SizedCostFunction<3, 6> {
+public:
+    TransformationCostFunction(Eigen::Vector3d query, Eigen::Vector3d truth) : query_(query), truth_(truth) {}
 
-// private:
-//     Eigen::Vector3d ref_;
-// };
+    virtual bool Evaluate(double const* const* parameters, double* residuals, double** jacobians) const
+    {
+        Eigen::Vector6d eigen_x = Eigen::Map<const Eigen::Vector6d>(parameters[0]);
+        const auto transformation = math_utils::lie::exp(eigen_x);
+        auto result = math_utils::lie::transformation(transformation, query_);
+        auto e = result - truth_;
+        residuals[0] = e(0);
+        residuals[1] = e(1);
+        residuals[2] = e(2);
+
+        if (jacobians != nullptr) {
+            if (jacobians[0] != nullptr) {
+                Eigen::Map<Eigen::Matrix<double, 3, 6, Eigen::RowMajor>> j(jacobians[0]);
+                Eigen::Matrix3d r = transformation.block(0, 0, 3, 3);
+                j.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
+                j.block(0, 3, 3, 3) = math_utils::lie::skew(-result);
+            }
+        }
+        return true;
+    }
+
+private:
+    Eigen::Vector3d query_;
+    Eigen::Vector3d truth_;
+};
 
 class TransformationError {
 public:
     TransformationError(Eigen::Vector3d query) : query_(query) {}
     static void set_truth(std::vector<Eigen::Vector3d> truth) { truth_ = truth; }
-    bool operator()(const double* const x, double* residual) const
+    bool operator()(const double* const x, double* residuals) const
     {
         Eigen::Vector6d eigen_x = Eigen::Map<const Eigen::Vector6d>(x);
         const auto transformation = math_utils::lie::exp(eigen_x);
         auto result = math_utils::lie::transformation(transformation, query_);
         auto e = minimum_error(result);
-        residual[0] = e(0);
-        residual[1] = e(1);
-        residual[2] = e(2);
+        residuals[0] = e(0);
+        residuals[1] = e(1);
+        residuals[2] = e(2);
         return true;
     }
 
@@ -47,7 +105,7 @@ private:
         double min_e_sq_norm = std::numeric_limits<double>::max();
         Eigen::Vector3d min_e;
         for (const auto& t : truth_) {
-            auto e = t - v;
+            auto e = v - t;
             if (double sq_norm = e.dot(e); sq_norm < min_e_sq_norm) {
                 min_e = e;
                 min_e_sq_norm = sq_norm;
@@ -100,7 +158,8 @@ int main()
 
     ceres::Problem problem;
     for (size_t i = 0; i < point_cloud_num; i++) {
-        ceres::CostFunction* cost_function = new ceres::NumericDiffCostFunction<TransformationError, ceres::CENTRAL, 3, 6>(new TransformationError(point_cloud_query[i]));
+        // ceres::CostFunction* cost_function = new ceres::NumericDiffCostFunction<TransformationError, ceres::CENTRAL, 3, 6>(new TransformationError(point_cloud_query[i]));
+        ceres::CostFunction* cost_function = new TransformationCostFunction(point_cloud_query[i], point_cloud_truth[i]);
         problem.AddResidualBlock(cost_function, NULL, x.data());
     }
 
@@ -110,6 +169,9 @@ int main()
     ceres::Solve(options, &problem, &summary);
 
     std::cout << summary.FullReport() << std::endl;
+
+    // x = solve(initial_x, point_cloud_query, point_cloud_truth);
+
     std::cout << "x:" << initial_x.transpose() << "->" << x.transpose() << std::endl;
 
     const auto x_transformation = math_utils::lie::exp(x);
