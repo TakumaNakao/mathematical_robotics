@@ -173,24 +173,24 @@ int main()
     Eigen::Vector6d initial_x = Eigen::Vector6d::Zero();
     Eigen::Vector6d x = initial_x;
 
-    // TransformationError::set_truth(point_cloud_truth_tree);
-    // TransformationCostFunction::set_truth(point_cloud_truth_tree);
+    TransformationError::set_truth(point_cloud_truth_tree);
+    TransformationCostFunction::set_truth(point_cloud_truth_tree);
 
-    // ceres::Problem problem;
-    // for (size_t i = 0; i < point_cloud_num; i++) {
-    //     // ceres::CostFunction* cost_function = new ceres::NumericDiffCostFunction<TransformationError, ceres::CENTRAL, 3, 6>(new TransformationError(point_cloud_query[i]));
-    //     ceres::CostFunction* cost_function = new TransformationCostFunction(point_cloud_query[i]);
-    //     problem.AddResidualBlock(cost_function, NULL, x.data());
-    // }
+    ceres::Problem problem;
+    for (size_t i = 0; i < point_cloud_num; i++) {
+        // ceres::CostFunction* cost_function = new ceres::NumericDiffCostFunction<TransformationError, ceres::CENTRAL, 3, 6>(new TransformationError(point_cloud_query[i]));
+        ceres::CostFunction* cost_function = new TransformationCostFunction(point_cloud_query[i]);
+        problem.AddResidualBlock(cost_function, NULL, x.data());
+    }
 
-    // ceres::Solver::Options options;
-    // options.minimizer_progress_to_stdout = true;
-    // ceres::Solver::Summary summary;
-    // ceres::Solve(options, &problem, &summary);
+    ceres::Solver::Options options;
+    options.minimizer_progress_to_stdout = true;
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, &problem, &summary);
 
-    // std::cout << summary.FullReport() << std::endl;
+    std::cout << summary.FullReport() << std::endl;
 
-    x = solve(initial_x, point_cloud_query, point_cloud_truth_tree, point_cloud_truth);
+    // x = solve(initial_x, point_cloud_query, point_cloud_truth_tree, point_cloud_truth);
 
     std::cout << "x:" << initial_x.transpose() << "->" << x.transpose() << std::endl;
 
