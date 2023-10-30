@@ -12,72 +12,40 @@
 
 #include "math_utils.hpp"
 #include "lie_group.hpp"
+#include "kd_tree.hpp"
 
-template<size_t D>
-class KdTree {
-public:
-    static KdTree build(std::vector<Eigen::Matrix<double, D, 1>> p_v) { return KdTree(p_v); }
-    KdTree(std::vector<Eigen::Matrix<double, D, 1>>& p_v, size_t depth = 1) : axis_(depth % D)
-    {
-        const size_t mid = (p_v.size() - 1) / 2;
-        std::nth_element(p_v.begin(), p_v.begin() + mid, p_v.end(), [&](const auto& lhs, const auto& rhs) { return lhs(axis_) < rhs(axis_); });
-        point_ = p_v[mid];
-        {
-            std::vector<Eigen::Matrix<double, D, 1>> v(p_v.begin(), p_v.begin() + mid);
-            if (!v.empty()) {
-                next_node_[0] = std::make_unique<KdTree>(v, depth + 1);
-            }
-        }
-        {
-            std::vector<Eigen::Matrix<double, D, 1>> v(p_v.begin() + mid + 1, p_v.end());
-            if (!v.empty()) {
-                next_node_[1] = std::make_unique<KdTree>(v, depth + 1);
-            }
-        }
-    }
-    Eigen::Matrix<double, D, 1> nn_serch(const Eigen::Matrix<double, D, 1>& query, Eigen::Matrix<double, D, 1> guess = {}, std::shared_ptr<double> min_sq_dist = nullptr) const
-    {
-        if (!min_sq_dist) {
-            min_sq_dist = std::make_shared<double>(std::numeric_limits<double>::max());
-        }
-        const Eigen::Matrix<double, D, 1> e = query - point_;
-        const double sq_dist = e.dot(e);
-        if (sq_dist < *min_sq_dist) {
-            guess = point_;
-            *min_sq_dist = sq_dist;
-        }
-        const size_t dir = query(axis_) < point_(axis_) ? 0 : 1;
-        if (next_node_[dir] != nullptr) {
-            guess = next_node_[dir]->nn_serch(query, guess, min_sq_dist);
-        }
-        if (next_node_[!dir] != nullptr && math_utils::square(query(axis_) - point_(axis_)) < *min_sq_dist) {
-            guess = next_node_[!dir]->nn_serch(query, guess, min_sq_dist);
-        }
-        return guess;
-    }
+namespace plt = matplot;
 
-private:
-    std::array<std::unique_ptr<KdTree>, 2> next_node_ = {nullptr, nullptr};
-    Eigen::Matrix<double, D, 1> point_;
-    size_t axis_;
-};
-
-Eigen::Vector3d minimum_error(const std::vector<Eigen::Vector3d>& truth, const Eigen::Vector3d& v)
+void plot_point_cloud(const std::vector<Eigen::Vector3d>& point_cloud, const std::string& color = "blue")
 {
-    double min_e_sq_norm = std::numeric_limits<double>::max();
-    Eigen::Vector3d min_e;
-    for (const auto& t : truth) {
-        auto e = v - t;
-        if (double sq_norm = e.dot(e); sq_norm < min_e_sq_norm) {
-            min_e = e;
-            min_e_sq_norm = sq_norm;
-        }
+    std::vector<double> x, y, z;
+    for (size_t i = 0; i < point_cloud.size(); i++) {
+        x.push_back(point_cloud[i](0));
+        y.push_back(point_cloud[i](1));
+        z.push_back(point_cloud[i](2));
     }
-    return min_e;
+    plt::plot3(x, y, z, ".")->marker_size(4).color(color);
 }
 
-Eigen::Vector6d solve(const Eigen::Vector6d& init_x, const std::vector<Eigen::Vector3d>& query, const std::shared_ptr<KdTree<3>> truth)
+Eigen::Vector6d solve(const Eigen::Vector6d& init_x, const std::vector<Eigen::Vector3d>& query, const std::shared_ptr<KdTree<3>> truth, const std::vector<Eigen::Vector3d>& truth_vector = {})
 {
+    auto plot = [&](const Eigen::Vector6d& x, size_t i) {
+        if (truth_vector.empty()) {
+            return;
+        }
+        std::vector<Eigen::Vector3d> transformed_query;
+        const auto transformation = math_utils::lie::exp(x);
+        for (const auto& q : query) {
+            transformed_query.push_back(math_utils::lie::transformation(transformation, q));
+        }
+        plt::hold(plt::on);
+        plot_point_cloud(truth_vector, "blue");
+        plot_point_cloud(transformed_query, "red");
+        plt::hold(plt::off);
+        plt::save("img/" + std::to_string(i) + ".png");
+        plt::cla();
+    };
+    size_t plot_count = 0;
     auto start = std::chrono::system_clock::now();
     auto solve_once = [&query, &truth](const Eigen::Vector6d& x) -> std::tuple<Eigen::Vector6d, double> {
         Eigen::Matrix6d h = Eigen::Matrix6d::Zero();
@@ -104,6 +72,7 @@ Eigen::Vector6d solve(const Eigen::Vector6d& init_x, const std::vector<Eigen::Ve
     while (true) {
         auto [dx, cost] = solve_once(x);
         x = math_utils::lie::log(Eigen::Matrix4d(math_utils::lie::exp(x) * math_utils::lie::exp(dx)));
+        plot(x, plot_count++);
         std::cout << "cost: " << cost << std::endl;
         if (last_cost < cost) {
             break;
@@ -174,8 +143,6 @@ private:
 
 int main()
 {
-    namespace plt = matplot;
-
     std::mt19937 engine(0);
     std::uniform_real_distribution<> pos_rand(-10, 10);
     std::uniform_real_distribution<> error_rand(-0.1, 0.1);
@@ -193,16 +160,6 @@ int main()
         point_cloud_query[i] = math_utils::lie::transformation(x_truth_transformation, point_cloud_truth[i] + Eigen::Vector3d(error_rand(engine), error_rand(engine), error_rand(engine)));
     }
 
-    auto plot_point_cloud = [](const std::vector<Eigen::Vector3d>& point_cloud, const std::string& color = "blue") {
-        std::vector<double> x, y, z;
-        for (size_t i = 0; i < point_cloud.size(); i++) {
-            x.push_back(point_cloud[i](0));
-            y.push_back(point_cloud[i](1));
-            z.push_back(point_cloud[i](2));
-        }
-        plt::plot3(x, y, z, ".")->marker_size(4).color(color);
-    };
-
     plt::hold(plt::on);
     plot_point_cloud(point_cloud_truth, "blue");
     plot_point_cloud(point_cloud_query, "red");
@@ -216,24 +173,24 @@ int main()
     Eigen::Vector6d initial_x = Eigen::Vector6d::Zero();
     Eigen::Vector6d x = initial_x;
 
-    TransformationError::set_truth(point_cloud_truth_tree);
-    TransformationCostFunction::set_truth(point_cloud_truth_tree);
+    // TransformationError::set_truth(point_cloud_truth_tree);
+    // TransformationCostFunction::set_truth(point_cloud_truth_tree);
 
-    ceres::Problem problem;
-    for (size_t i = 0; i < point_cloud_num; i++) {
-        // ceres::CostFunction* cost_function = new ceres::NumericDiffCostFunction<TransformationError, ceres::CENTRAL, 3, 6>(new TransformationError(point_cloud_query[i]));
-        ceres::CostFunction* cost_function = new TransformationCostFunction(point_cloud_query[i]);
-        problem.AddResidualBlock(cost_function, NULL, x.data());
-    }
+    // ceres::Problem problem;
+    // for (size_t i = 0; i < point_cloud_num; i++) {
+    //     // ceres::CostFunction* cost_function = new ceres::NumericDiffCostFunction<TransformationError, ceres::CENTRAL, 3, 6>(new TransformationError(point_cloud_query[i]));
+    //     ceres::CostFunction* cost_function = new TransformationCostFunction(point_cloud_query[i]);
+    //     problem.AddResidualBlock(cost_function, NULL, x.data());
+    // }
 
-    ceres::Solver::Options options;
-    options.minimizer_progress_to_stdout = true;
-    ceres::Solver::Summary summary;
-    ceres::Solve(options, &problem, &summary);
+    // ceres::Solver::Options options;
+    // options.minimizer_progress_to_stdout = true;
+    // ceres::Solver::Summary summary;
+    // ceres::Solve(options, &problem, &summary);
 
-    std::cout << summary.FullReport() << std::endl;
+    // std::cout << summary.FullReport() << std::endl;
 
-    // x = solve(initial_x, point_cloud_query, point_cloud_truth_tree);
+    x = solve(initial_x, point_cloud_query, point_cloud_truth_tree, point_cloud_truth);
 
     std::cout << "x:" << initial_x.transpose() << "->" << x.transpose() << std::endl;
 

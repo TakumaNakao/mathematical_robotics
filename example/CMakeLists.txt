@@ -11,7 +11,7 @@ find_package(Ceres REQUIRED)
 find_package(Matplot++ REQUIRED)
 
 include_directories(${CERES_INCLUDE_DIR})
-include_directories(../math_utils)
+include_directories(../utilities)
 
 set(libs 
     Eigen3::Eigen

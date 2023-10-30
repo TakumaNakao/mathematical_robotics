@@ -19,4 +19,4 @@ bash docker_bringup.sh
 最適化にはCeres Solverを使用  
 
 ### 例
-<img src="img/point_cloud_matching_before.png" width="50%"><img src="img/point_cloud_matching_after.png" width="50%">
+![point_cloud_matching](img/point_cloud_matching.gif)
