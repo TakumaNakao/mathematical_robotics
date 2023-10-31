@@ -25,8 +25,8 @@ Eigen::Vector6d solve(const Eigen::Vector6d& init_x, const std::vector<Eigen::Ve
             auto e = calc_error(result);
             Eigen::Matrix3d r = transformation.block(0, 0, 3, 3);
             Eigen::Matrix<double, 3, 6> jac;
-            jac.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
-            jac.block(0, 3, 3, 3) = math_utils::lie::skew(-result);
+            jac.block(0, 0, 3, 3) = transformation.block(0, 0, 3, 3);
+            jac.block(0, 3, 3, 3) = transformation.block(0, 0, 3, 3) * math_utils::lie::skew(-query[j]);
             h += jac.transpose() * jac;
             g += jac.transpose() * e;
             cost += 0.5 * e.dot(e);

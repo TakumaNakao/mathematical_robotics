@@ -29,8 +29,8 @@ public:
             if (jacobians[0] != nullptr) {
                 Eigen::Map<Eigen::Matrix<double, 3, 6, Eigen::RowMajor>> j(jacobians[0]);
                 Eigen::Matrix3d r = transformation.block(0, 0, 3, 3);
-                j.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
-                j.block(0, 3, 3, 3) = math_utils::lie::skew(-result);
+                j.block(0, 0, 3, 3) = transformation.block(0, 0, 3, 3);
+                j.block(0, 3, 3, 3) = transformation.block(0, 0, 3, 3) * math_utils::lie::skew(-query_);
             }
         }
         return true;
