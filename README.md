@@ -14,6 +14,16 @@
 bash docker_bringup.sh
 ```
 
+## Build
+build
+```
+bash build.sh
+```
+clean build
+```
+bash clean_build.sh
+```
+
 ## point_cloud_matching
 リー群による剛体変換を用いた3次元点群のマッチング  
 最適化にはCeres Solverを使用  
