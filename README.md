@@ -19,4 +19,10 @@ bash docker_bringup.sh
 最適化にはCeres Solverを使用  
 
 ### 例
-![point_cloud_matching](img/point_cloud_matching.gif)
+![point_cloud_matching](readme_img/point_cloud_matching.gif)
+
+## point_cloud_to_line_matching
+点群と2次元平面上の線分をマッチングする  
+
+### 例
+![point_cloud_to_line_matching](readme_img/point_cloud_to_line_matching.gif)

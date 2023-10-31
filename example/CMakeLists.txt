@@ -23,3 +23,8 @@ add_executable(point_cloud_matching "point_cloud_matching.cpp")
 target_link_libraries(point_cloud_matching 
     ${libs}
 )
+
+add_executable(point_cloud_to_line_matching "point_cloud_to_line_matching.cpp")
+target_link_libraries(point_cloud_to_line_matching 
+    ${libs}
+)

@@ -91,4 +91,12 @@ static inline double variance(const std::vector<double>& v)
 
 static inline double standard_deviation(const std::vector<double>& v) { return std::sqrt(variance(v)); }
 
+static inline Eigen::Vector2d rotate(const Eigen::Vector2d& v, const double theta)
+{
+    Eigen::Vector2d ret;
+    ret(0) = v(0) * std::cos(theta) - v(1) * std::sin(theta);
+    ret(1) = v(0) * std::sin(theta) + v(1) * std::cos(theta);
+    return ret;
+}
+
 } // namespace math_utils
