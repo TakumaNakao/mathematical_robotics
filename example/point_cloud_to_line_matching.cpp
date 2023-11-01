@@ -31,7 +31,7 @@ int main()
 {
     std::cout << "select solve mode" << std::endl;
     std::cout << "  " << solve_mode_constant::CERES_ANALYTIC_DERIVATIVES << ": Ceres Analytic Derivatives" << std::endl;
-    std::cout << "  " << solve_mode_constant::CERES_NUMERIC_DERIVATIVES << ": Ceres Nu,eric Derivatives" << std::endl;
+    std::cout << "  " << solve_mode_constant::CERES_NUMERIC_DERIVATIVES << ": Ceres Numeric Derivatives" << std::endl;
     std::cout << "  " << solve_mode_constant::SELF_GAUSS_NEWTON << ": Self Gauss Newton" << std::endl;
     int solve_mode;
     std::cin >> solve_mode;
