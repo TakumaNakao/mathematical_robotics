@@ -43,6 +43,11 @@ private:
 
 class Error {
 public:
+    template<ceres::NumericDiffMethodType method>
+    static ceres::NumericDiffCostFunction<Error, method, 3, 6>* gen_numeric_diff_cost_function(Eigen::Vector3d query)
+    {
+        return new ceres::NumericDiffCostFunction<Error, method, 3, 6>(new Error(query));
+    }
     static void set_error_func(std::function<Eigen::Vector3d(const Eigen::Vector3d&)> calc_error) { calc_error_ = calc_error; }
     Error(Eigen::Vector3d query) : query_(query) {}
     bool operator()(const double* const x, double* residuals) const

@@ -82,7 +82,7 @@ int main()
                 cost_function = new ceres_cost_function::se3::CostFunction(point_cloud_query[i]);
             }
             else {
-                cost_function = new ceres::NumericDiffCostFunction<ceres_cost_function::se3::Error, ceres::CENTRAL, 3, 6>(new ceres_cost_function::se3::Error(point_cloud_query[i]));
+                cost_function = ceres_cost_function::se3::Error::gen_numeric_diff_cost_function<ceres::CENTRAL>(point_cloud_query[i]);
             }
             problem.AddResidualBlock(cost_function, nullptr, x.data());
         }
