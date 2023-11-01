@@ -27,7 +27,7 @@ public:
         a = diff(1);
         b = -diff(0);
         c = end(1) * diff(0) - end(0) * diff(1);
-        norm_ab = std::sqrt(a * a + b * b);
+        norm_ab = std::hypot(a, b);
     }
 
     std::optional<double> calc_x(const double y) const

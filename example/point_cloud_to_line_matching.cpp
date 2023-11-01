@@ -123,7 +123,7 @@ int main()
             else {
                 cost_function = new ceres::NumericDiffCostFunction<ceres_cost_function::se3::Error, ceres::CENTRAL, 3, 6>(new ceres_cost_function::se3::Error(point_cloud_query[i]));
             }
-            problem.AddResidualBlock(cost_function, NULL, x.data());
+            problem.AddResidualBlock(cost_function, nullptr, x.data());
         }
 
         ceres::Solver::Options options;

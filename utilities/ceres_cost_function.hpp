@@ -15,7 +15,7 @@ class CostFunction : public ceres::SizedCostFunction<3, 6> {
 public:
     static void set_error_func(std::function<Eigen::Vector3d(const Eigen::Vector3d&)> calc_error) { calc_error_ = calc_error; }
     CostFunction(Eigen::Vector3d query) : query_(query) {}
-    virtual bool Evaluate(double const* const* parameters, double* residuals, double** jacobians) const
+    bool Evaluate(double const* const* parameters, double* residuals, double** jacobians) const override
     {
         Eigen::Vector6d eigen_x = Eigen::Map<const Eigen::Vector6d>(parameters[0]);
         const auto transformation = math_utils::lie::exp(eigen_x);
@@ -29,8 +29,8 @@ public:
             if (jacobians[0] != nullptr) {
                 Eigen::Map<Eigen::Matrix<double, 3, 6, Eigen::RowMajor>> j(jacobians[0]);
                 Eigen::Matrix3d r = transformation.block(0, 0, 3, 3);
-                j.block(0, 0, 3, 3) = transformation.block(0, 0, 3, 3);
-                j.block(0, 3, 3, 3) = transformation.block(0, 0, 3, 3) * math_utils::lie::skew(-query_);
+                j.block(0, 0, 3, 3) = r;
+                j.block(0, 3, 3, 3) = r * math_utils::lie::skew(-query_);
             }
         }
         return true;
