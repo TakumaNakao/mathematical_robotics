@@ -31,14 +31,19 @@ bash clean_build.sh
 Optimization of point cloud using Lie algebra.  
 Using self created Gauss-Newton method and Ceres Solver for optimization.
 
-## point_cloud_matching
+### point_cloud_matching
 Pure matching between 3D point clouds.
 
-### 例
+#### 例
 ![point_cloud_matching](readme_img/point_cloud_matching.gif)
 
-## point_cloud_to_line_matching
+### point_cloud_to_line_matching
 Matching a point cloud with a line segment on a 2D plane.
 
-### 例
+#### 例
 ![point_cloud_to_line_matching](readme_img/point_cloud_to_line_matching.gif)
+
+## References
+* https://qiita.com/scomup/items/fa9aed8870585e865117
+* https://github.com/scomup/MathematicalRobotics/tree/main
+* https://github.com/borglab/gtsam/tree/develop
